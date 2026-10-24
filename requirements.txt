@@ -1,0 +1,17 @@
+# Core data pipeline
+pandas
+pyarrow
+duckdb
+
+# Statistics
+numpy
+scipy
+statsmodels
+
+# Dashboard
+streamlit
+plotly
+
+# Quality
+pytest
+
