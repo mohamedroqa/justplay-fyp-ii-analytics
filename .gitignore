@@ -10,7 +10,10 @@ logs/*.log
 __pycache__/
 .pytest_cache/
 pytest-cache-files-*/
+.pytest_cache*/
+.pytest_temp*/
 .test_runtime/
+.test_tmp_run_*/
 .streamlit/secrets.toml
 .venv/
 

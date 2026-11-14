@@ -12,6 +12,8 @@ statsmodels
 streamlit
 plotly
 
+# Documentation
+python-docx
+
 # Quality
 pytest
-
