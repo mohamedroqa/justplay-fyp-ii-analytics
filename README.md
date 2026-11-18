@@ -22,22 +22,39 @@
 - `tests`: اختبارات الحسابات والتكامل والخصوصية.
 - `logs`: سجلات وتقارير التشغيل الآلية.
 
-## المرحلة الحالية
+## الحالة الحالية
 
-المرحلة 1: تدقيق البيانات الكاملة وتثبيت مصدر الحقيقة قبل بدء التحويل إلى Parquet وDuckDB.
+الجزء البرمجي والتحليلي مكتمل ومختبر، والداشبورد منشورة على Streamlit Cloud:
 
-تشغيل التدقيق:
+<https://justplay-fyp-ii-analytics-b6v2mt5vbqpgclwg44zdnm.streamlit.app/>
 
-```powershell
-python src\pipeline\audit_data.py
+النتيجة التنفيذية: لم يثبت أي Variation تحسناً في متوسط Gross أو Net Revenue
+مقارنةً بـ`default` بعد تصحيح Holm. التوصية هي الإبقاء على `default` حالياً
+وإعادة اختبار `androidndorder` في تجربة تحقق مستقلة.
+
+## مسار البيانات
+
+```text
+CSV خام
+  → تدقيق الجودة ونطاق التجربة
+  → Parquet معالجة وجدول واحد لكل مستخدم
+  → KPIs وRetention وتحليل إحصائي
+  → Data Marts مجمعة وآمنة
+  → Streamlit Dashboard
 ```
 
-المخرجات:
-
-- `logs/data_audit.json`
-- `docs/data_audit_summary.md`
+محرك المعالجة الفعلي هو Pandas/PyArrow بقراءة دفعية وتخزين Parquet مضغوط.
+تشمل المؤشرات المستخدمين بلا معاملات، وتستبعد المعاملات غير المرتبطة بمستخدمي
+التجربة. Retention في هذا المشروع مبني على الأحداث المالية المتاحة وليس على
+سجل جلسات مستقل.
 
 ## تشغيل النظام العملي
+
+تثبيت الاعتماديات:
+
+```powershell
+python -m pip install -r requirements.txt
+```
 
 تشغيل الداشبورد محلياً:
 
@@ -64,3 +81,12 @@ powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1
 ```
 
 لإعادة معالجة ملفات CSV الخام الكبيرة أيضاً، أضف الخيار `-RebuildProcessed`. هذه الخطوة أبطأ لأنها تعالج أكثر من 12 مليون معاملة.
+
+## أهم الملفات
+
+- `src/pipeline/build_processed_data.py`: تنظيف البيانات وبناء طبقة المستخدم.
+- `src/analytics/build_data_marts.py`: حساب المؤشرات والملخصات.
+- `src/analytics/run_statistical_analysis.py`: اختبارات A/B.
+- `app/streamlit_app.py`: صفحات الداشبورد التسع.
+- `docs/Dashboard_Explanation_AR.docx`: دليل الشرح وأسئلة المناقشة.
+- `PROJECT_PROGRESS.md`: سجل الإنجاز وما تبقى للتقرير والعرض.

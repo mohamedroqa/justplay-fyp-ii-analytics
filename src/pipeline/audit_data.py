@@ -181,7 +181,7 @@ def audit_revenue(path: Path, known_user_ids: set[str]) -> dict[str, Any]:
         },
         "revenue_type_counts": counter_to_dict(revenue_types),
         "ad_unit_format_counts": counter_to_dict(ad_formats),
-        "duplicate_row_check": "Deferred to DuckDB full-row grouping in the transformation phase.",
+        "duplicate_row_check": "Deferred to the verified processed-Parquet duplicate audit.",
     }
 
 
@@ -250,7 +250,7 @@ def write_summary(report: dict[str, Any], path: Path) -> None:
         "## ملاحظات المرحلة التالية",
         "",
         "- تثبيت تعريف القيم النصية `missing` قبل التحويل.",
-        "- تنفيذ فحص التكرار الكامل للمعاملات داخل DuckDB.",
+        "- تنفيذ فحص التكرار الكامل للمعاملات بعد بناء طبقة Parquet المعالجة.",
         "- بناء أهلية D1/D3/D7/D14/D30 بناءً على تاريخ نهاية الرصد.",
         "- عدم نشر أي ملف يحتوي على `user_id`.",
     ]

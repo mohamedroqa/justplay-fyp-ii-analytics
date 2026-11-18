@@ -6,7 +6,7 @@ if (-not (Test-Path "data\marts\overall_kpis.parquet")) {
     throw "Dashboard Data Marts are missing. Build the analysis outputs first."
 }
 
-python -c "import streamlit, pandas, pyarrow" 2>$null
+python -c "import altair, pandas, pyarrow, streamlit" 2>$null
 if ($LASTEXITCODE -ne 0) {
     throw "Required Python packages are missing. Run: python -m pip install -r requirements.txt"
 }

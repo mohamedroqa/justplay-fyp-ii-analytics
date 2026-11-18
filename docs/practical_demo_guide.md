@@ -4,12 +4,13 @@
 
 ## قبل الشرح
 
-1. شغّل فحص الجاهزية:
+1. افتح النسخة المنشورة: <https://justplay-fyp-ii-analytics-b6v2mt5vbqpgclwg44zdnm.streamlit.app/>.
+2. كخطة بديلة محلية، شغّل فحص الجاهزية:
    `python scripts/check_demo_readiness.py`
-2. يجب أن تظهر النتيجة `DEMO_READY`.
-3. شغّل الداشبورد:
+3. يجب أن تظهر النتيجة `DEMO_READY`.
+4. شغّل الداشبورد:
    `powershell -ExecutionPolicy Bypass -File scripts/start_dashboard.ps1`
-4. افتح `http://localhost:8501`.
+5. افتح `http://localhost:8501`.
 
 ## تسلسل الشرح المقترح
 

@@ -89,7 +89,7 @@
 
 | الحالة | المهمة | المخرج المتوقع |
 |---|---|---|
-| 🟡 | تثبيت محرك المعالجة النهائي | DuckDB عند توفر التنزيل، مع Pandas/PyArrow كمسار عامل حالياً |
+| ✅ | تثبيت محرك المعالجة النهائي | Pandas/PyArrow مع قراءة دفعية وتخزين Parquet مضغوط |
 | ✅ | تحويل ملف المستخدمين إلى Parquet | `data/processed/users.parquet` — 934,270 صفاً |
 | ✅ | تصفية معاملات مستخدمي التجربة وتحويلها إلى Parquet | `data/processed/revenue_experiment.parquet` — 11,256,114 صفاً |
 | ✅ | توحيد أنواع التواريخ والأرقام والقيم المفقودة | `logs/processed_build_report.json` |
@@ -174,12 +174,12 @@
 | ✅ | Unit tests لحسابات KPIs وRetention | `tests/test_kpi_retention_unit.py` — 4 اختبارات ناجحة |
 | ✅ | Integration test لبناء Data Marts من طبقة البيانات المعالجة | `tests/test_data_mart_integration.py` |
 | ✅ | Regression checks للأرقام الرئيسية والقرار الإحصائي | `tests/test_regression_headlines.py` |
-| ✅ | اختبارات الداشبورد الوظيفية | الصفحات السبع اجتازت Smoke Test |
+| ✅ | اختبارات الداشبورد الوظيفية | الصفحات التسع اجتازت Smoke Test |
 | ✅ | اختبارات تنزيل النتائج | صفحات النتائج الست اجتازت اختبار التنزيل الآمن |
 | ✅ | قياس أداء الداشبورد | أبطأ صفحة 0.19 ثانية، والذاكرة القصوى 62.99 MB |
 | ✅ | اختبارات الخصوصية وغياب المعرفات الفردية في Data Marts |
 | ✅ | إعداد GitHub خاص | `mohamedroqa/justplay-fyp-ii-analytics` |
-| ✅ | نشر نسخة Streamlit Cloud |
+| ✅ | نشر نسخة Streamlit Cloud: <https://justplay-fyp-ii-analytics-b6v2mt5vbqpgclwg44zdnm.streamlit.app/> |
 | ✅ | تجهيز نسخة محلية تعمل دون إنترنت | `scripts/start_dashboard.ps1` |
 
 ## 12. التقرير والعرض النهائي

@@ -433,13 +433,14 @@ def page_variations() -> None:
         tests["test_name"].eq("welch_t_test"),
         ["metric", "treatment_variation", "control_value", "treatment_value",
          "relative_lift", "ci_95_low", "ci_95_high", "p_value_holm", "significant_after_holm"],
-    ]
+    ].copy()
+    financial["relative_lift_pct"] = financial.pop("relative_lift") * 100
     st.dataframe(
         financial,
         width="stretch",
         hide_index=True,
         column_config={
-            "relative_lift": st.column_config.NumberColumn("Relative Lift", format="%.2f%%"),
+            "relative_lift_pct": st.column_config.NumberColumn("Relative Lift", format="%.2f%%"),
             "p_value_holm": st.column_config.NumberColumn("Holm p-value", format="%.4f"),
             "significant_after_holm": st.column_config.CheckboxColumn("دال إحصائيًا"),
         },
@@ -579,15 +580,18 @@ def page_statistics() -> None:
     subset = tests.loc[tests["metric"].eq(metric)].copy()
     with test_col:
         test_name = st.selectbox("نوع الاختبار", sorted(subset["test_name"].unique()))
-    subset = subset.loc[subset["test_name"].eq(test_name)]
+    subset = subset.loc[subset["test_name"].eq(test_name)].copy()
     subset["decision"] = subset["significant_after_holm"].map({True: "دال بعد Holm", False: "غير دال"})
+    display_subset = subset.copy()
+    display_subset["relative_lift_pct"] = display_subset["relative_lift"] * 100
     with st.container(border=True):
         st.dataframe(
-            subset[["treatment_variation", "control_value", "treatment_value", "absolute_difference",
-                    "relative_lift", "ci_95_low", "ci_95_high", "p_value_holm", "effect_size", "decision"]],
+            display_subset[["treatment_variation", "control_value", "treatment_value", "absolute_difference",
+                            "relative_lift_pct", "ci_95_low", "ci_95_high", "p_value_holm", "effect_size", "decision"]],
             width="stretch", hide_index=True,
             column_config={
                 "p_value_holm": st.column_config.NumberColumn("Holm p-value", format="%.4f"),
+                "relative_lift_pct": st.column_config.NumberColumn("Relative Lift", format="%.2f%%"),
                 "decision": st.column_config.TextColumn("القرار"),
             },
         )

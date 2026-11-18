@@ -1,7 +1,6 @@
 # Core data pipeline
 pandas
 pyarrow
-duckdb
 
 # Statistics
 numpy
@@ -10,7 +9,7 @@ statsmodels
 
 # Dashboard
 streamlit
-plotly
+altair
 
 # Documentation
 python-docx
