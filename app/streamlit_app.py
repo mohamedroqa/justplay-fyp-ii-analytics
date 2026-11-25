@@ -48,7 +48,19 @@ st.markdown(
       h2, h3 {color: var(--ink); font-weight: 700 !important;}
       [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #17172B 0%, #242445 100%);
-        border-left: 0;
+        order: 2;
+        border-right: 0;
+        border-left: 1px solid rgba(255,255,255,.08);
+        direction: rtl;
+      }
+      [data-testid=stMain] {order: 1; direction: ltr;}
+      [data-testid=stSidebarCollapsedControl] {
+        left: auto !important;
+        right: 1rem !important;
+      }
+      [data-testid=stSidebarHeader] button svg,
+      [data-testid=stSidebarCollapsedControl] button svg {
+        transform: scaleX(-1);
       }
       [data-testid="stSidebar"] * {color: #F5F6FF !important;}
       [data-testid="stSidebar"] [role="radiogroup"] label {
