@@ -14,6 +14,9 @@
 | `variation_summary.parquet` | 5 | مقارنة مجموعات تجربة A/B |
 | `channel_summary.parquet` | 19 | تحليل قنوات الاكتساب |
 | `country_summary.parquet` | 2 | مقارنة US وCA |
+| `platform_summary.parquet` | 1 | توثيق أن نطاق المنصة Android |
+| `os_version_summary.parquet` | 11 | مقارنة إصدارات Android |
+| `user_value_segments.parquet` | 5 | تصنيف المستخدمين حسب صافي القيمة |
 | `retention_cohorts.parquet` | 45 | Retention حسب أسبوع التثبيت والـVariation |
 | `ad_format_summary.parquet` | 4 | أداء صيغ الإعلانات |
 | `revenue_type_summary.parquet` | 3 | توزيع مصادر الإيراد |
@@ -29,7 +32,7 @@
 
 ## التحقق
 
-نجحت ثمانية فحوصات آلية تشمل مطابقة الأعداد والمجاميع المالية بين جميع الجداول، صحة حقول Retention، ومراجعة الخصوصية. لا يحتوي أي Data Mart على الحقل `user_id`.
+نجحت فحوصات المصالحة لجميع Data Marts، بما فيها المنصة وإصدارات Android وشرائح القيمة، مع التحقق من صحة حقول Retention والخصوصية. لا يحتوي أي Data Mart على الحقل `user_id`.
 
 أداة البناء: `src/analytics/build_data_marts.py`  
 أداة التحقق: `tests/run_data_mart_checks.py`  

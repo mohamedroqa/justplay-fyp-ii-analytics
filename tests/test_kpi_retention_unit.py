@@ -4,7 +4,12 @@ import math
 
 import pandas as pd
 
-from src.analytics.build_data_marts import RETENTION_DAYS, summarize_by, summarize_group
+from src.analytics.build_data_marts import (
+    RETENTION_DAYS,
+    add_user_value_segments,
+    summarize_by,
+    summarize_group,
+)
 
 
 def sample_features() -> pd.DataFrame:
@@ -70,3 +75,17 @@ def test_zero_eligible_users_produces_nan_retention_rate() -> None:
         assert result[f"d{day}_eligible_users"] == 0
         assert math.isnan(result[f"d{day}_exact_activity_rate"])
         assert math.isnan(result[f"d{day}_rolling_activity_rate"])
+
+
+def test_user_value_segments_use_net_revenue_thresholds() -> None:
+    frame = sample_features().copy()
+    frame.loc[:, "total_revenue"] = [0.0, 20.0, 10.0]
+    frame.loc[:, "net_revenue"] = [0.0, -2.0, 10.0]
+
+    segmented, thresholds = add_user_value_segments(frame)
+
+    assert segmented["value_segment"].tolist() == [
+        "no_revenue", "negative_value", "low_value"
+    ]
+    assert thresholds["positive_net_median"] == 10.0
+    assert thresholds["positive_net_p90"] == 10.0

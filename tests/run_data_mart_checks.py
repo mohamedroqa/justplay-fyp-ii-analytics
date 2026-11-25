@@ -18,6 +18,9 @@ def main() -> None:
     variation = pd.read_parquet(MARTS / "variation_summary.parquet")
     channel = pd.read_parquet(MARTS / "channel_summary.parquet")
     country = pd.read_parquet(MARTS / "country_summary.parquet")
+    platform = pd.read_parquet(MARTS / "platform_summary.parquet")
+    os_version = pd.read_parquet(MARTS / "os_version_summary.parquet")
+    value_segments = pd.read_parquet(MARTS / "user_value_segments.parquet")
     cohorts = pd.read_parquet(MARTS / "retention_cohorts.parquet")
     ad_formats = pd.read_parquet(MARTS / "ad_format_summary.parquet")
     revenue_types = pd.read_parquet(MARTS / "revenue_type_summary.parquet")
@@ -38,6 +41,9 @@ def main() -> None:
         ("variation", variation),
         ("channel", channel),
         ("country", country),
+        ("platform", platform),
+        ("os_version", os_version),
+        ("value_segments", value_segments),
         ("cohorts", cohorts),
     ]:
         assert int(frame["users"].sum()) == expected_users
@@ -51,7 +57,23 @@ def main() -> None:
     assert close(ad_formats["revenue_share"].sum(), 1.0)
     print("PASS: revenue type and ad format marts reconcile")
 
-    for frame in [overall, variation, channel, country, cohorts]:
+    assert len(platform) == 1
+    assert platform.loc[0, "platform"] == "android"
+    assert int(platform.loc[0, "users"]) == expected_users
+    assert set(value_segments["value_segment"]) == {
+        "no_revenue", "negative_value", "low_value", "medium_value", "high_value"
+    }
+    assert value_segments["segment_order"].tolist() == [1, 2, 3, 4, 5]
+    assert close(value_segments["user_share"].sum(), 1.0)
+    assert value_segments["positive_net_median"].nunique() == 1
+    assert value_segments["positive_net_p90"].nunique() == 1
+    assert (
+        value_segments["positive_net_median"].iloc[0]
+        < value_segments["positive_net_p90"].iloc[0]
+    )
+    print("PASS: platform and user-value segmentation rules are valid")
+
+    for frame in [overall, variation, channel, country, platform, os_version, value_segments, cohorts]:
         for day in (1, 3, 7, 14, 30):
             exact = frame[f"d{day}_exact_activity_rate"].dropna()
             rolling = frame[f"d{day}_rolling_activity_rate"].dropna()
@@ -71,7 +93,7 @@ def main() -> None:
         columns = pd.read_parquet(path).columns
         assert "user_id" not in columns
     print("PASS: no dashboard mart exposes user_id")
-    print("ALL_DATA_MART_CHECKS_PASSED: 8")
+    print("ALL_DATA_MART_CHECKS_PASSED: 11")
 
 
 if __name__ == "__main__":

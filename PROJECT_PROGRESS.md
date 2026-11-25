@@ -1,6 +1,6 @@
 # سجل إنجاز مشروع التخرج الثاني
 
-آخر تحديث: **14 نوفمبر 2026**
+آخر تحديث: **25 نوفمبر 2026**
 الحالة العامة: **الجزء البرمجي والتحليلي والنشر مكتملة — الفحص البصري والتقرير والعرض هي الخطوات التالية**
 
 ## مفتاح الحالات
@@ -20,7 +20,7 @@
 | تدقيق البيانات الكاملة | ✅ منجزة | 100% |
 | بناء طبقة البيانات المعالجة | ✅ منجزة وتم إغلاق التنظيف | 100% |
 | تعريف وحساب KPIs | ✅ منجزة وموثقة | 100% |
-| Retention وCohorts | ✅ الحسابات والجداول الأساسية منجزة | 85% |
+| Retention وCohorts | ✅ الحسابات والمقارنات حسب Variation والقناة والدولة منجزة | 100% |
 | التحليل الإحصائي | ✅ منجز وتم التحقق منه | 100% |
 | Data Marts | ✅ منجزة ومتحقق منها | 100% |
 | Dashboard | ✅ مكتمل وظيفياً وتم اختباره | 100% |
@@ -120,7 +120,7 @@
 | ✅ | حساب Rolling activity Dn+ بشكل منفصل | نتائج D1/D3/D7/D14/D30 محفوظة منفصلة |
 | ✅ | معالجة Right Censoring | استبعاد غير مكتملي نافذة الرصد من مقام Dn |
 | ✅ | إنشاء Cohorts حسب أسبوع التثبيت | `data/marts/retention_cohorts.parquet` — 45 صفاً |
-| 🟡 | مقارنة Retention حسب Variation والقناة والدولة | Variation/Cohort منجز؛ توسعة القناة والدولة لاحقاً |
+| ✅ | مقارنة Retention حسب Variation والقناة والدولة | D1/D3/D7/D14/D30 متاحة في الملخصات المجمعة والداشبورد |
 
 ## 8. التحليل الإحصائي
 
@@ -144,6 +144,9 @@
 | ✅ | نتائج Retention وCohorts | `data/marts/retention_cohorts.parquet` — 45 صفاً |
 | ✅ | نتائج Ad Formats | `data/marts/ad_format_summary.parquet` — 4 صفوف |
 | ✅ | نتائج الدول | `data/marts/country_summary.parquet` — صفان |
+| ✅ | نتائج المنصات | `data/marts/platform_summary.parquet` — صف واحد (Android) |
+| ✅ | نتائج إصدارات Android | `data/marts/os_version_summary.parquet` — 11 صفاً |
+| ✅ | شرائح قيمة المستخدمين | `data/marts/user_value_segments.parquet` — 5 شرائح مجمعة |
 | ✅ | نتائج أنواع الإيراد | `data/marts/revenue_type_summary.parquet` — 3 صفوف |
 | ✅ | نتائج تحليل حساسية القيم المتطرفة | `data/marts/outlier_sensitivity.parquet` — 15 صفاً |
 | ✅ | نتائج الاختبارات | `data/marts/statistical_tests.parquet` — 48 اختباراً |
@@ -157,26 +160,28 @@
 | ✅ | صفحة Executive Overview |
 | ✅ | صفحة كيف يعمل النظام ومعمارية الـPipeline |
 | ✅ | صفحة A/B Variations |
-| ✅ | صفحة Retention & Cohorts |
-| ✅ | صفحة Acquisition Channels |
+| ✅ | صفحة سلوك المستخدمين وRetention وCohorts وإصدارات Android |
+| ✅ | صفحة Acquisition Channels مع ترتيب D1/D7/D30 Retention |
+| ✅ | صفحة تحليل الدول |
+| ✅ | صفحة شرائح قيمة المستخدمين |
 | ✅ | صفحة Revenue & Ad Formats |
 | ✅ | صفحة Statistical Testing |
 | ✅ | صفحة Data Quality & Methodology |
 | ✅ | صفحة النتائج والتوصيات والقرار التنفيذي |
 | ✅ | إعادة تصميم الواجهة وتسلسل قصة المشروع بصرياً |
-| ✅ | الفلاتر والتنزيل | تنزيل CSV آمن من صفحات النتائج الست |
+| ✅ | الفلاتر والتنزيل | تنزيل CSV آمن من صفحات النتائج الثماني |
 | ✅ | تحسين الأداء والـCaching | تحميل Data Marts عبر `st.cache_data` |
 
 ## 11. الاختبارات والنشر
 
 | الحالة | المهمة |
 |---|---|
-| ✅ | Unit tests لحسابات KPIs وRetention | `tests/test_kpi_retention_unit.py` — 4 اختبارات ناجحة |
+| ✅ | Unit tests لحسابات KPIs وRetention وتصنيف القيمة | `tests/test_kpi_retention_unit.py` — 5 اختبارات ناجحة |
 | ✅ | Integration test لبناء Data Marts من طبقة البيانات المعالجة | `tests/test_data_mart_integration.py` |
 | ✅ | Regression checks للأرقام الرئيسية والقرار الإحصائي | `tests/test_regression_headlines.py` |
-| ✅ | اختبارات الداشبورد الوظيفية | الصفحات التسع اجتازت Smoke Test |
-| ✅ | اختبارات تنزيل النتائج | صفحات النتائج الست اجتازت اختبار التنزيل الآمن |
-| ✅ | قياس أداء الداشبورد | أبطأ صفحة 0.19 ثانية، والذاكرة القصوى 62.99 MB |
+| ✅ | اختبارات الداشبورد الوظيفية | الصفحات الإحدى عشرة اجتازت Smoke Test |
+| ✅ | اختبارات تنزيل النتائج | صفحات النتائج الثماني اجتازت اختبار التنزيل الآمن |
+| ✅ | قياس أداء الداشبورد | أبطأ صفحة 0.25 ثانية، والذاكرة القصوى 62.68 MB |
 | ✅ | اختبارات الخصوصية وغياب المعرفات الفردية في Data Marts |
 | ✅ | إعداد GitHub خاص | `mohamedroqa/justplay-fyp-ii-analytics` |
 | ✅ | نشر نسخة Streamlit Cloud: <https://justplay-fyp-ii-analytics-b6v2mt5vbqpgclwg44zdnm.streamlit.app/> |

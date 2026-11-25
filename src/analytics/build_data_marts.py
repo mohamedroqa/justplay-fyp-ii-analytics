@@ -17,6 +17,13 @@ LOGS = ROOT / "logs"
 FEATURES_PATH = PROCESSED / "user_features.parquet"
 REVENUE_PATH = PROCESSED / "revenue_experiment.parquet"
 RETENTION_DAYS = (1, 3, 7, 14, 30)
+VALUE_SEGMENT_ORDER = {
+    "no_revenue": 1,
+    "negative_value": 2,
+    "low_value": 3,
+    "medium_value": 4,
+    "high_value": 5,
+}
 
 
 def summarize_group(frame: pd.DataFrame) -> dict:
@@ -71,6 +78,31 @@ def summarize_by(frame: pd.DataFrame, group_columns: list[str]) -> pd.DataFrame:
     return pd.DataFrame(records)
 
 
+def add_user_value_segments(features: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, float]]:
+    """Classify users by observed net contribution without exposing user rows."""
+    positive_net = features.loc[features["net_revenue"].gt(0), "net_revenue"]
+    if positive_net.empty:
+        raise ValueError("Cannot build value segments without positive net revenue")
+
+    low_upper = float(positive_net.quantile(0.50))
+    medium_upper = float(positive_net.quantile(0.90))
+    segmented = features.copy()
+    segmented["value_segment"] = np.select(
+        [
+            segmented["net_revenue"].lt(0),
+            segmented["total_revenue"].le(0),
+            segmented["net_revenue"].le(low_upper),
+            segmented["net_revenue"].le(medium_upper),
+        ],
+        ["negative_value", "no_revenue", "low_value", "medium_value"],
+        default="high_value",
+    )
+    return segmented, {
+        "positive_net_median": low_upper,
+        "positive_net_p90": medium_upper,
+    }
+
+
 def build() -> dict:
     MARTS.mkdir(parents=True, exist_ok=True)
     LOGS.mkdir(parents=True, exist_ok=True)
@@ -87,7 +119,21 @@ def build() -> dict:
     variation = summarize_by(features, ["variation"])
     channel = summarize_by(features, ["channel_clean"])
     country = summarize_by(features, ["country_code"])
+    platform = summarize_by(features, ["platform"])
+    os_version = summarize_by(features, ["os_version_clean"])
     cohorts = summarize_by(features, ["install_week", "variation"])
+
+    segmented, value_thresholds = add_user_value_segments(features)
+    value_segments = summarize_by(segmented, ["value_segment"])
+    value_segments["segment_order"] = value_segments["value_segment"].map(VALUE_SEGMENT_ORDER)
+    value_segments["user_share"] = value_segments["users"] / len(segmented)
+    total_net = float(segmented["net_revenue"].sum())
+    value_segments["net_revenue_share"] = (
+        value_segments["net_revenue"] / total_net if total_net else np.nan
+    )
+    value_segments["positive_net_median"] = value_thresholds["positive_net_median"]
+    value_segments["positive_net_p90"] = value_thresholds["positive_net_p90"]
+    value_segments = value_segments.sort_values("segment_order").reset_index(drop=True)
 
     revenue = pd.read_parquet(
         REVENUE_PATH,
@@ -126,6 +172,9 @@ def build() -> dict:
         "variation_summary": variation,
         "channel_summary": channel,
         "country_summary": country,
+        "platform_summary": platform,
+        "os_version_summary": os_version,
+        "user_value_segments": value_segments,
         "retention_cohorts": cohorts,
         "ad_format_summary": ad_formats,
         "revenue_type_summary": revenue_types,
@@ -157,7 +206,7 @@ def build() -> dict:
     }
     report_path = LOGS / "data_marts_build_report.json"
     report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps(report, ensure_ascii=False, indent=2))
+    print(json.dumps(report, ensure_ascii=True, indent=2))
     return report
 
 

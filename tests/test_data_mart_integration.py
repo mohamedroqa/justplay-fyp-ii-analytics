@@ -14,6 +14,8 @@ def synthetic_features() -> pd.DataFrame:
             "variation": ["default"] * 3 + ["treatment"] * 3,
             "channel_clean": ["organic", "ads", "organic", "ads", "organic", "ads"],
             "country_code": ["us", "us", "ca", "us", "ca", "ca"],
+            "platform": ["android"] * 6,
+            "os_version_clean": ["14", "14", "13", "13", "12", "Unknown"],
             "install_dt": pd.to_datetime(["2025-01-01"] * 6),
             "last_activity_dt": pd.to_datetime(["2025-01-10"] * 6),
             "total_revenue": [10.0, 20.0, 0.0, 5.0, 15.0, 25.0],
@@ -61,12 +63,17 @@ def test_data_mart_build_end_to_end(tmp_path: Path, monkeypatch) -> None:
     report = build_data_marts.build()
     overall = pd.read_parquet(marts / "overall_kpis.parquet").iloc[0]
     variations = pd.read_parquet(marts / "variation_summary.parquet")
+    value_segments = pd.read_parquet(marts / "user_value_segments.parquet")
 
     assert report["headline"]["users"] == 6
     assert overall["gross_revenue"] == 75.0
     assert overall["net_revenue"] == 65.0
     assert variations["users"].sum() == 6
     assert variations["gross_revenue"].sum() == 75.0
+    assert value_segments["users"].sum() == 6
+    assert set(value_segments["value_segment"]).issubset(
+        {"no_revenue", "negative_value", "low_value", "medium_value", "high_value"}
+    )
     assert (logs / "data_marts_build_report.json").exists()
     for path in marts.glob("*.parquet"):
         assert "user_id" not in pd.read_parquet(path).columns

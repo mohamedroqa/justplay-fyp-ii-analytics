@@ -10,8 +10,10 @@ PAGES = [
     "الملخص التنفيذي",
     "كيف يعمل النظام؟",
     "مجموعات A/B",
-    "Retention & Cohorts",
+    "سلوك المستخدمين",
     "قنوات الاكتساب",
+    "تحليل الدول",
+    "شرائح قيمة المستخدمين",
     "الإيراد والإعلانات",
     "الاختبارات الإحصائية",
     "النتائج والتوصيات",
@@ -27,3 +29,14 @@ def test_all_dashboard_pages_render() -> None:
         navigation.set_value(page)
         app.run()
         assert not app.exception, f"Dashboard page failed: {page}"
+
+
+def test_dynamic_rate_axes_render() -> None:
+    for page in ["سلوك المستخدمين", "قنوات الاكتساب", "تحليل الدول"]:
+        app = AppTest.from_file(str(APP), default_timeout=30).run()
+        navigation = app.sidebar.radio[0]
+        navigation.set_value(page)
+        app.run()
+        app.selectbox[0].set_value("d30_rolling_activity_rate")
+        app.run()
+        assert not app.exception, f"Rate-axis rendering failed: {page}"

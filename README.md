@@ -87,6 +87,6 @@ powershell -ExecutionPolicy Bypass -File scripts/run_pipeline.ps1
 - `src/pipeline/build_processed_data.py`: تنظيف البيانات وبناء طبقة المستخدم.
 - `src/analytics/build_data_marts.py`: حساب المؤشرات والملخصات.
 - `src/analytics/run_statistical_analysis.py`: اختبارات A/B.
-- `app/streamlit_app.py`: صفحات الداشبورد التسع.
+- `app/streamlit_app.py`: صفحات الداشبورد الإحدى عشرة.
 - `docs/Dashboard_Explanation_AR.docx`: دليل الشرح وأسئلة المناقشة.
 - `PROJECT_PROGRESS.md`: سجل الإنجاز وما تبقى للتقرير والعرض.

@@ -188,6 +188,14 @@ st.markdown(
 
 
 CHART_COLORS = ["#5B5BD6", "#18A999", "#F59E0B", "#EF6A8A", "#7C3AED"]
+VALUE_SEGMENT_LABELS = {
+    "no_revenue": "غير محققين للإيراد",
+    "negative_value": "قيمة صافية سالبة",
+    "low_value": "قيمة منخفضة",
+    "medium_value": "قيمة متوسطة",
+    "high_value": "قيمة مرتفعة",
+}
+COUNTRY_LABELS = {"us": "الولايات المتحدة", "ca": "كندا"}
 
 
 def page_header(title: str, subtitle: str, kicker: str) -> None:
@@ -462,12 +470,22 @@ def page_variations() -> None:
 
 def page_retention() -> None:
     cohorts = load_mart("retention_cohorts").copy()
+    os_versions = load_mart("os_version_summary").copy()
+    platform = load_mart("platform_summary").iloc[0]
+    overall = load_mart("overall_kpis").iloc[0]
     cohorts["install_week"] = pd.to_datetime(cohorts["install_week"])
     page_header(
-        "النشاط الزمني وتحليل Cohorts",
-        "تتبّع سلوك مجموعات التثبيت عبر الزمن مع معالجة Right Censoring.",
-        "RETENTION & COHORTS",
+        "تحليل سلوك المستخدمين",
+        "النشاط، تحقيق الإيراد، Retention وCohorts مع مقارنة إصدارات Android.",
+        "USER BEHAVIOR",
     )
+    behavior_kpis = st.columns(4)
+    behavior_kpis[0].metric("المنصة", str(platform["platform"]).title())
+    behavior_kpis[1].metric("Activation Rate", pct(overall["activation_rate"]))
+    behavior_kpis[2].metric("Monetization Rate", pct(overall["monetization_rate"]))
+    behavior_kpis[3].metric("D7 Rolling Activity", pct(overall["d7_rolling_activity_rate"]))
+
+    section_label("Retention حسب أسبوع التثبيت والمجموعة")
     mode_col, day_col = st.columns(2, gap="large")
     with mode_col:
         mode = st.radio("تعريف النشاط", ["Exact-day Activity", "Rolling Activity Dn+"], horizontal=True)
@@ -497,41 +515,140 @@ def page_retention() -> None:
         "مستبعدون من المقام.</div>",
         unsafe_allow_html=True,
     )
+
+    section_label("السلوك حسب إصدار Android")
+    os_versions["os_label"] = os_versions["os_version_clean"].map(
+        lambda value: "غير معروف" if str(value) == "Unknown" else f"Android {value}"
+    )
+    os_versions["os_sort"] = pd.to_numeric(
+        os_versions["os_version_clean"], errors="coerce"
+    ).fillna(-1)
+    os_versions = os_versions.sort_values("os_sort", ascending=False)
+    stable_os = os_versions.loc[os_versions["users"].ge(1_000)].copy()
+    os_metric_labels = {
+        "users": "عدد المستخدمين",
+        "arpu": "ARPU",
+        "avg_net_revenue_per_user": "متوسط صافي الإيراد للمستخدم",
+        "d7_rolling_activity_rate": "D7 Rolling Activity",
+        "d30_rolling_activity_rate": "D30 Rolling Activity",
+    }
+    os_metric = st.selectbox(
+        "مؤشر مقارنة إصدارات Android",
+        list(os_metric_labels),
+        format_func=os_metric_labels.get,
+    )
+    os_axis = alt.Axis(format=".1%") if os_metric.endswith("_rate") else alt.Axis()
+    os_order = stable_os["os_label"].tolist()
+    os_chart = (
+        alt.Chart(stable_os)
+        .mark_bar(cornerRadiusEnd=7)
+        .encode(
+            y=alt.Y("os_label:N", title="إصدار النظام", sort=os_order),
+            x=alt.X(
+                f"{os_metric}:Q",
+                title=os_metric_labels[os_metric],
+                axis=os_axis,
+            ),
+            color=alt.Color(
+                f"{os_metric}:Q",
+                scale=alt.Scale(range=["#DADAFE", "#5B5BD6"]),
+                legend=None,
+            ),
+            tooltip=[
+                alt.Tooltip("os_label:N", title="الإصدار"),
+                alt.Tooltip("users:Q", title="المستخدمون", format=","),
+                alt.Tooltip("arpu:Q", title="ARPU", format="$.3f"),
+                alt.Tooltip("avg_net_revenue_per_user:Q", title="Avg Net / User", format="$.3f"),
+                alt.Tooltip("d7_rolling_activity_rate:Q", title="D7 Rolling", format=".2%"),
+            ],
+        )
+    )
+    os_chart_col, os_table_col = st.columns([1.2, 1], gap="large")
+    with os_chart_col:
+        with st.container(border=True):
+            st.altair_chart(polish_chart(os_chart), width="stretch")
+    with os_table_col:
+        st.dataframe(
+            stable_os[["os_label", "users", "arpu", "avg_net_revenue_per_user",
+                       "monetization_rate", "d7_rolling_activity_rate"]],
+            width="stretch",
+            hide_index=True,
+            height=390,
+            column_config={
+                "os_label": "الإصدار",
+                "users": st.column_config.NumberColumn("المستخدمون", format=","),
+                "arpu": st.column_config.NumberColumn("ARPU", format="$%.3f"),
+                "avg_net_revenue_per_user": st.column_config.NumberColumn("Avg Net", format="$%.3f"),
+                "monetization_rate": st.column_config.NumberColumn("Monetization", format="%.2f%%"),
+                "d7_rolling_activity_rate": st.column_config.NumberColumn("D7 Rolling", format="%.2f%%"),
+            },
+        )
+    st.markdown(
+        '<div class="method-note"><strong>حدود المقارنة:</strong> جميع المستخدمين على Android، '
+        "لذلك نقارن إصدارات النظام ولا ندّعي وجود مقارنة Android مقابل iOS. أُخفي الإصدار الذي "
+        "يحتوي أقل من 1,000 مستخدم لتجنب استنتاجات غير مستقرة.</div>",
+        unsafe_allow_html=True,
+    )
     download_csv(cohorts, "retention_cohorts.csv")
+    download_csv(os_versions, "os_version_summary.csv", "تنزيل تحليل إصدارات Android")
 
 
 def page_channels() -> None:
     data = load_mart("channel_summary").copy()
     page_header(
         "أداء قنوات الاكتساب",
-        "رتّب القنوات حسب الحجم أو القيمة أو كفاءة تحقيق الإيراد.",
+        "رتّب القنوات حسب الحجم، القيمة، تحقيق الإيراد أو استمرار المستخدمين.",
         "ACQUISITION CHANNELS",
     )
-    filter_a, filter_b = st.columns(2, gap="large")
+    filter_a, filter_b, filter_c = st.columns(3, gap="large")
     with filter_a:
         top_n = st.slider("عدد القنوات المعروضة", 5, min(19, len(data)), min(10, len(data)))
     with filter_b:
+        metric_labels = {
+            "net_revenue": "صافي الإيراد",
+            "users": "عدد المستخدمين",
+            "arpu": "ARPU",
+            "monetization_rate": "معدل تحقيق الإيراد",
+            "d1_rolling_activity_rate": "D1 Rolling Activity",
+            "d7_rolling_activity_rate": "D7 Rolling Activity",
+            "d30_rolling_activity_rate": "D30 Rolling Activity",
+        }
         metric = st.selectbox(
             "ترتيب القنوات حسب",
-            ["net_revenue", "users", "arpu", "monetization_rate"],
-            format_func={
-                "net_revenue": "صافي الإيراد",
-                "users": "عدد المستخدمين",
-                "arpu": "ARPU",
-                "monetization_rate": "معدل تحقيق الإيراد",
-            }.get,
+            list(metric_labels),
+            format_func=metric_labels.get,
         )
-    shown = data.nlargest(top_n, metric)
+    with filter_c:
+        min_volume = st.select_slider(
+            "الحد الأدنى لحجم العينة",
+            options=[0, 100, 1_000, 5_000, 10_000],
+            value=1_000,
+        )
+    volume_column = (
+        metric.replace("_rolling_activity_rate", "_eligible_users")
+        if metric.endswith("_rolling_activity_rate")
+        else "users"
+    )
+    eligible_data = data.loc[data[volume_column].ge(min_volume)].copy()
+    shown = eligible_data.nlargest(top_n, metric)
+    metric_axis = alt.Axis(format=".1%") if metric.endswith("_rate") else alt.Axis()
     chart = (
         alt.Chart(shown)
         .mark_bar()
         .encode(
             y=alt.Y("channel_clean:N", title="Channel", sort="-x"),
-            x=alt.X(f"{metric}:Q", title=metric),
+            x=alt.X(
+                f"{metric}:Q",
+                title=metric_labels[metric],
+                axis=metric_axis,
+            ),
             color=alt.Color(f"{metric}:Q", scale=alt.Scale(range=["#DADAFE", "#5B5BD6"]), legend=None),
             tooltip=["channel_clean", alt.Tooltip("users:Q", format=","),
-                     alt.Tooltip("net_revenue:Q", format=",.2f"),
-                     alt.Tooltip("arpu:Q", format=".3f")],
+                     alt.Tooltip("net_revenue:Q", format="$,.2f"),
+                     alt.Tooltip("arpu:Q", format="$.3f"),
+                     alt.Tooltip("d1_rolling_activity_rate:Q", format=".2%"),
+                     alt.Tooltip("d7_rolling_activity_rate:Q", format=".2%"),
+                     alt.Tooltip("d30_rolling_activity_rate:Q", format=".2%")],
         )
     )
     chart_col, table_col = st.columns([1.2, 1], gap="large")
@@ -539,8 +656,186 @@ def page_channels() -> None:
         with st.container(border=True):
             st.altair_chart(polish_chart(chart), width="stretch")
     with table_col:
-        st.dataframe(shown, width="stretch", hide_index=True, height=430)
+        st.dataframe(
+            shown[["channel_clean", "users", "arpu", "avg_net_revenue_per_user",
+                   "monetization_rate", "d1_rolling_activity_rate",
+                   "d7_rolling_activity_rate", "d30_rolling_activity_rate"]],
+            width="stretch", hide_index=True, height=430,
+            column_config={
+                "channel_clean": "القناة",
+                "users": st.column_config.NumberColumn("المستخدمون", format=","),
+                "arpu": st.column_config.NumberColumn("ARPU", format="$%.3f"),
+                "avg_net_revenue_per_user": st.column_config.NumberColumn("Avg Net", format="$%.3f"),
+                "monetization_rate": st.column_config.NumberColumn("Monetization", format="%.2f%%"),
+                "d1_rolling_activity_rate": st.column_config.NumberColumn("D1", format="%.2f%%"),
+                "d7_rolling_activity_rate": st.column_config.NumberColumn("D7", format="%.2f%%"),
+                "d30_rolling_activity_rate": st.column_config.NumberColumn("D30", format="%.2f%%"),
+            },
+        )
+    st.markdown(
+        '<div class="method-note">Retention هنا نشاط مبني على الأحداث المالية المتاحة، وليس '
+        f"Session Retention. يطبق الترتيب حد عينة قدره {min_volume:,} على المقام المناسب لتقليل "
+        "تضخيم القنوات الصغيرة. لا تتوفر تكلفة الإنفاق الإعلاني، لذلك لا ندّعي حساب ROAS.</div>",
+        unsafe_allow_html=True,
+    )
     download_csv(shown, "channel_summary_filtered.csv")
+
+
+def page_countries() -> None:
+    data = load_mart("country_summary").copy()
+    data["country"] = data["country_code"].map(COUNTRY_LABELS).fillna(data["country_code"].str.upper())
+    page_header(
+        "تحليل الأسواق حسب الدولة",
+        "مقارنة حجم المستخدمين، القيمة المالية والاستمرار بين الولايات المتحدة وكندا.",
+        "COUNTRY PERFORMANCE",
+    )
+    country_kpis = st.columns(4)
+    largest = data.nlargest(1, "users").iloc[0]
+    best_net = data.nlargest(1, "avg_net_revenue_per_user").iloc[0]
+    best_retention = data.nlargest(1, "d7_rolling_activity_rate").iloc[0]
+    country_kpis[0].metric("عدد الأسواق", f"{len(data):,}")
+    country_kpis[1].metric("أكبر سوق", str(largest["country_code"]).upper(), f"{largest['users']:,} مستخدم")
+    country_kpis[2].metric("أعلى Avg Net / User", str(best_net["country_code"]).upper(), money(best_net["avg_net_revenue_per_user"]))
+    country_kpis[3].metric("أعلى D7 Rolling", str(best_retention["country_code"]).upper(), pct(best_retention["d7_rolling_activity_rate"]))
+
+    country_metric_labels = {
+        "users": "عدد المستخدمين",
+        "arpu": "ARPU",
+        "avg_net_revenue_per_user": "متوسط صافي الإيراد للمستخدم",
+        "monetization_rate": "معدل تحقيق الإيراد",
+        "d7_rolling_activity_rate": "D7 Rolling Activity",
+        "d30_rolling_activity_rate": "D30 Rolling Activity",
+    }
+    country_metric = st.selectbox(
+        "مؤشر المقارنة بين الدول",
+        list(country_metric_labels),
+        format_func=country_metric_labels.get,
+    )
+    country_axis = (
+        alt.Axis(format=".1%") if country_metric.endswith("_rate") else alt.Axis()
+    )
+    country_chart = (
+        alt.Chart(data)
+        .mark_bar(cornerRadiusTopLeft=8, cornerRadiusTopRight=8, size=75)
+        .encode(
+            x=alt.X("country:N", title=None, sort="-y", axis=alt.Axis(labelAngle=0)),
+            y=alt.Y(
+                f"{country_metric}:Q",
+                title=country_metric_labels[country_metric],
+                axis=country_axis,
+            ),
+            color=alt.Color("country:N", title=None, scale=alt.Scale(range=["#5B5BD6", "#18A999"])),
+            tooltip=[
+                "country:N",
+                alt.Tooltip("users:Q", title="المستخدمون", format=","),
+                alt.Tooltip("arpu:Q", title="ARPU", format="$.3f"),
+                alt.Tooltip("avg_net_revenue_per_user:Q", title="Avg Net", format="$.3f"),
+                alt.Tooltip("monetization_rate:Q", title="Monetization", format=".2%"),
+                alt.Tooltip("d7_rolling_activity_rate:Q", title="D7 Rolling", format=".2%"),
+            ],
+        )
+    )
+    country_chart_col, country_table_col = st.columns([1, 1.25], gap="large")
+    with country_chart_col:
+        with st.container(border=True):
+            st.altair_chart(polish_chart(country_chart), width="stretch")
+    with country_table_col:
+        st.dataframe(
+            data[["country", "users", "arpu", "avg_net_revenue_per_user",
+                  "monetization_rate", "d7_rolling_activity_rate", "d30_rolling_activity_rate"]],
+            width="stretch", hide_index=True,
+            column_config={
+                "country": "الدولة",
+                "users": st.column_config.NumberColumn("المستخدمون", format=","),
+                "arpu": st.column_config.NumberColumn("ARPU", format="$%.3f"),
+                "avg_net_revenue_per_user": st.column_config.NumberColumn("Avg Net", format="$%.3f"),
+                "monetization_rate": st.column_config.NumberColumn("Monetization", format="%.2f%%"),
+                "d7_rolling_activity_rate": st.column_config.NumberColumn("D7", format="%.2f%%"),
+                "d30_rolling_activity_rate": st.column_config.NumberColumn("D30", format="%.2f%%"),
+            },
+        )
+    st.markdown(
+        '<div class="method-note"><strong>تنبيه تفسيري:</strong> اختلاف حجم السوق كبير، لذلك '
+        "استخدم ARPU وAvg Net ومعدلات النشاط للمقارنة العادلة، ولا تعتمد على إجمالي الإيراد وحده.</div>",
+        unsafe_allow_html=True,
+    )
+    download_csv(data, "country_summary.csv", "تنزيل تحليل الدول")
+
+
+def page_user_value() -> None:
+    data = load_mart("user_value_segments").copy().sort_values("segment_order")
+    data["segment"] = data["value_segment"].map(VALUE_SEGMENT_LABELS)
+    low_upper = float(data["positive_net_median"].iloc[0])
+    medium_upper = float(data["positive_net_p90"].iloc[0])
+    high = data.loc[data["value_segment"].eq("high_value")].iloc[0]
+    no_revenue = data.loc[data["value_segment"].eq("no_revenue")].iloc[0]
+    negative = data.loc[data["value_segment"].eq("negative_value")].iloc[0]
+    page_header(
+        "تصنيف المستخدمين حسب القيمة",
+        "شرائح مجمعة حسب صافي المساهمة المالية لفهم أين تتركز القيمة والمخاطر.",
+        "USER VALUE SEGMENTATION",
+    )
+    segment_kpis = st.columns(4)
+    segment_kpis[0].metric("مستخدمو القيمة المرتفعة", f"{int(high['users']):,}", pct(high["user_share"]))
+    segment_kpis[1].metric("مساهمة الشريحة المرتفعة", pct(high["net_revenue_share"]), money(high["net_revenue"]))
+    segment_kpis[2].metric("غير محققين للإيراد", f"{int(no_revenue['users']):,}", pct(no_revenue["user_share"]))
+    segment_kpis[3].metric("قيمة صافية سالبة", f"{int(negative['users']):,}", money(negative["net_revenue"]))
+
+    segment_order = data["segment"].tolist()
+    users_chart = (
+        alt.Chart(data)
+        .mark_arc(innerRadius=65, outerRadius=120)
+        .encode(
+            theta=alt.Theta("users:Q"),
+            color=alt.Color("segment:N", title=None, sort=segment_order,
+                            scale=alt.Scale(range=["#C8CDD9", "#EF6A8A", "#AAA9EE", "#5B5BD6", "#18A999"])),
+            tooltip=["segment:N", alt.Tooltip("users:Q", format=","), alt.Tooltip("user_share:Q", format=".2%")],
+        )
+    )
+    value_chart = (
+        alt.Chart(data)
+        .mark_bar(cornerRadiusEnd=7)
+        .encode(
+            y=alt.Y("segment:N", title=None, sort=segment_order),
+            x=alt.X("net_revenue:Q", title="Net Revenue ($)"),
+            color=alt.condition(alt.datum.net_revenue < 0, alt.value("#EF6A8A"), alt.value("#18A999")),
+            tooltip=["segment:N", alt.Tooltip("net_revenue:Q", format="$,.2f"),
+                     alt.Tooltip("avg_net_revenue_per_user:Q", format="$.3f")],
+        )
+    )
+    left, right = st.columns(2, gap="large")
+    with left:
+        with st.container(border=True):
+            st.markdown("#### توزيع المستخدمين")
+            st.altair_chart(polish_chart(users_chart), width="stretch")
+    with right:
+        with st.container(border=True):
+            st.markdown("#### مساهمة صافي الإيراد")
+            st.altair_chart(polish_chart(value_chart), width="stretch")
+
+    st.dataframe(
+        data[["segment", "users", "user_share", "gross_revenue", "cashout", "net_revenue",
+              "avg_net_revenue_per_user", "d7_rolling_activity_rate"]],
+        width="stretch", hide_index=True,
+        column_config={
+            "segment": "الشريحة",
+            "users": st.column_config.NumberColumn("المستخدمون", format=","),
+            "user_share": st.column_config.NumberColumn("حصة المستخدمين", format="%.2f%%"),
+            "gross_revenue": st.column_config.NumberColumn("Gross", format="$%,.2f"),
+            "cashout": st.column_config.NumberColumn("Cashout", format="$%,.2f"),
+            "net_revenue": st.column_config.NumberColumn("Net", format="$%,.2f"),
+            "avg_net_revenue_per_user": st.column_config.NumberColumn("Avg Net", format="$%.3f"),
+            "d7_rolling_activity_rate": st.column_config.NumberColumn("D7 Rolling", format="%.2f%%"),
+        },
+    )
+    st.markdown(
+        f'<div class="method-note"><strong>قاعدة التصنيف:</strong> القيمة السالبة عندما يكون Net Revenue أقل من صفر؛ '
+        f"غير محقق للإيراد عندما لا يوجد Gross Revenue؛ القيمة المنخفضة حتى ${low_upper:,.2f} صافيًا؛ "
+        f"المتوسطة حتى ${medium_upper:,.2f}؛ والمرتفعة فوق ذلك. الحدود هي Median وP90 للمستخدمين "
+        "ذوي صافي الإيراد الموجب، وليست حكمًا دائمًا على الفرد.</div>",
+        unsafe_allow_html=True,
+    )
+    download_csv(data, "user_value_segments.csv", "تنزيل شرائح قيمة المستخدمين")
 
 
 def page_revenue() -> None:
@@ -661,6 +956,14 @@ def page_methodology() -> None:
 
 
 def page_recommendations() -> None:
+    segments = load_mart("user_value_segments")
+    countries = load_mart("country_summary")
+    channels = load_mart("channel_summary")
+    high_value = segments.loc[segments["value_segment"].eq("high_value")].iloc[0]
+    no_revenue = segments.loc[segments["value_segment"].eq("no_revenue")].iloc[0]
+    qualified_channels = channels.loc[channels["d7_eligible_users"].ge(1_000)]
+    best_d7_channel = qualified_channels.nlargest(1, "d7_rolling_activity_rate").iloc[0]
+    best_country_d7 = countries.nlargest(1, "d7_rolling_activity_rate").iloc[0]
     page_header(
         "النتائج والتوصيات",
         "تحويل نتائج التحليل إلى قرار عملي قابل للشرح والتنفيذ.",
@@ -671,6 +974,26 @@ def page_recommendations() -> None:
         <div class="recommendation-hero">
           <div class="big">القرار المقترح: الإبقاء على المجموعة default حاليًا</div>
           <div class="small">لا يوجد تحسن مالي دال يبرر الإطلاق العام. أفضل خطوة هي تجربة تحقق جديدة ومحددة للمجموعة androidndorder.</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    section_label("فرص تحسين الأداء والربحية")
+    st.markdown(
+        f"""
+        <div class="decision-grid">
+          <div class="decision-card go"><strong>حماية الشريحة عالية القيمة</strong><span>
+          تمثل {high_value['user_share']:.2%} من المستخدمين وتولد {high_value['net_revenue_share']:.2%}
+          من صافي الإيراد. الأولوية لتجارب احتفاظ موجهة دون تعريض تجربتهم الحالية للخطر.</span></div>
+          <div class="decision-card hold"><strong>رفع التفعيل المالي</strong><span>
+          يوجد {int(no_revenue['users']):,} مستخدم بلا Gross Revenue ({no_revenue['user_share']:.2%}).
+          اختبر تحسين onboarding وأول عرض بدلاً من زيادة الاكتساب فقط.</span></div>
+          <div class="decision-card go"><strong>جودة القناة والسوق</strong><span>
+          تتصدر {best_d7_channel['channel_clean']} مؤشر D7 Rolling بين القنوات ذات المقام الموثوق
+          ({best_d7_channel['d7_rolling_activity_rate']:.2%})، بينما تتصدر
+          {COUNTRY_LABELS.get(best_country_d7['country_code'], best_country_d7['country_code'])}
+          الدول في المؤشر نفسه ({best_country_d7['d7_rolling_activity_rate']:.2%}). اختبر السبب قبل إعادة توزيع الميزانية.</span></div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -726,8 +1049,10 @@ PAGES = {
     "الملخص التنفيذي": page_overview,
     "كيف يعمل النظام؟": page_system_flow,
     "مجموعات A/B": page_variations,
-    "Retention & Cohorts": page_retention,
+    "سلوك المستخدمين": page_retention,
     "قنوات الاكتساب": page_channels,
+    "تحليل الدول": page_countries,
+    "شرائح قيمة المستخدمين": page_user_value,
     "الإيراد والإعلانات": page_revenue,
     "الاختبارات الإحصائية": page_statistics,
     "النتائج والتوصيات": page_recommendations,

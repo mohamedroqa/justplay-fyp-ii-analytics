@@ -73,9 +73,24 @@
 | `variation_summary.parquet` | Variation واحدة | لا |
 | `channel_summary.parquet` | قناة اكتساب واحدة | لا |
 | `country_summary.parquet` | دولة واحدة | لا |
+| `platform_summary.parquet` | منصة واحدة | لا |
+| `os_version_summary.parquet` | إصدار نظام واحد | لا |
+| `user_value_segments.parquet` | شريحة قيمة مجمعة | لا |
 | `retention_cohorts.parquet` | أسبوع تثبيت × Variation | لا |
 | `ad_format_summary.parquet` | صيغة إعلان واحدة | لا |
 | `revenue_type_summary.parquet` | نوع إيراد واحد | لا |
+
+### تعريف شرائح قيمة المستخدمين
+
+تعتمد الشرائح على `Net Revenue` لكل مستخدم قبل التجميع، ثم تُحذف جميع المعرفات الفردية من المخرج:
+
+- `negative_value`: صافي الإيراد أقل من صفر.
+- `no_revenue`: لا يوجد Gross Revenue، بعد فصل الحالات السالبة.
+- `low_value`: صافي الإيراد حتى Median المستخدمين ذوي القيمة الموجبة.
+- `medium_value`: أعلى من Median وحتى P90 للمستخدمين ذوي القيمة الموجبة.
+- `high_value`: أعلى من P90 للمستخدمين ذوي القيمة الموجبة.
+
+الحدود محسوبة من نافذة البيانات الحالية، ولذلك تستخدم للتحليل التجميعي ولا تمثل حكماً دائماً على مستخدم بعينه.
 
 ## ملاحظة القيم المفقودة
 
